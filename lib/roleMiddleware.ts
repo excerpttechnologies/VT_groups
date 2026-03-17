@@ -20,8 +20,14 @@ export async function requireAuth(req: NextRequest) {
 
   // 2. Verify token
   const decoded = verifyToken(token);
-  if (!decoded || !decoded.id) {
-    throw new Error('Invalid token');
+  if (!decoded) {
+    console.error('[AUTH] Token verification failed for request');
+    throw new Error('Token verification failed');
+  }
+  
+  if (!decoded.id) {
+    console.error('[AUTH] Token missing id field:', decoded);
+    throw new Error('Invalid token structure');
   }
 
   // 3. Fetch user from DB

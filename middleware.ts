@@ -45,7 +45,13 @@ export async function middleware(request: NextRequest) {
 
   // ✅ STEP 5: Verify token and check role-based access
   try {
-    const { payload }: any = await jwtVerify(token, JWT_SECRET);
+    const decoded = await jwtVerify(token, JWT_SECRET);
+    if (!decoded || !decoded.payload) {
+      console.error('[Middleware] JWT verification returned empty payload');
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+    
+    const { payload }: any = decoded;
     const userRole = payload.role;
 
     // Protect Admin routes
