@@ -3,6 +3,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { AuthProvider } from '@/context/AuthContext'
 import { Toaster } from 'sonner'
 import { Playfair_Display, DM_Sans } from 'next/font/google'
+import { GlobalErrorBoundary } from '@/components/global-error-boundary'
 import './globals.css'
 
 const playfair = Playfair_Display({
@@ -37,11 +38,13 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${playfair.variable} ${dmSans.variable} font-sans antialiased`} suppressHydrationWarning>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
-        <Toaster richColors position="top-right" />
-        <Analytics />
+        <GlobalErrorBoundary>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+          <Toaster richColors position="top-right" />
+          <Analytics />
+        </GlobalErrorBoundary>
       </body>
     </html>
   )

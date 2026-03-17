@@ -27,19 +27,24 @@ export async function POST(req: NextRequest) {
     // 2. Find user (include password)
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
+      console.log(`[AUTH] Login failed: User not found for email: ${email}`);
       return apiError('Invalid credentials', 401);
     }
 
     // 3. Check isActive
     if (!user.isActive) {
+      console.log(`[AUTH] Login failed: Account deactivated for email: ${email}`);
       return apiError('Account is deactivated', 403);
     }
 
     // 4. Compare password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+      console.log(`[AUTH] Login failed: Invalid password for email: ${email}`);
       return apiError('Invalid credentials', 401);
     }
+
+    console.log(`[AUTH] Login successful for email: ${email}`);
 
     // 5. Generate JWT
     const token = signToken({

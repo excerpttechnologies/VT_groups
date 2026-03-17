@@ -9,12 +9,18 @@ import { apiResponse, apiError } from '@/lib/auth';
 import { generateInstallmentSchedule } from '@/lib/installmentHelper';
 
 export async function GET(req: NextRequest) {
-  // DISABLE IN PRODUCTION
-  if (process.env.NODE_ENV === 'production') {
-    return apiError('Seeding is disabled in production', 403);
-  }
-
   try {
+    // Allow in dev mode OR with valid seed token in production
+    const seedToken = req.nextUrl.searchParams.get('token');
+    const validToken = process.env.SEED_TOKEN || 'seed-token-dev';
+    
+    const isProduction = process.env.NODE_ENV === 'production';
+    const isAuthorized = !isProduction || seedToken === validToken;
+
+    if (!isAuthorized) {
+      return apiError('Seeding is disabled in production without valid token', 403);
+    }
+
     await connectDB();
 
     // Clear existing data (optional, but good for clean seed)
