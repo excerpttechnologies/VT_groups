@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Building2, Lock, Mail, ArrowRight, Shield, Loader2 } from "lucide-react";
+import { Building2, Lock, Mail, ArrowRight, Shield, Loader2, Users } from "lucide-react";
 import type { UserRole } from "@/lib/mock-data";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
@@ -174,32 +174,40 @@ export default function LoginPage() {
 
             {/* Quick Access - Demo Only */}
             <div className="mt-6 pt-6 border-t border-border">
-              <p className="text-sm text-muted-foreground text-center mb-4">
-                Quick Demo Access
+              <p className="text-sm font-semibold text-center mb-3">
+                🎯 Quick Demo Access
               </p>
+              <div className="bg-blue-950/30 border border-blue-900/50 rounded-lg p-3 mb-4 text-xs">
+                <p className="text-blue-200 mb-2"><strong>Admin:</strong> admin@vtgroups.com / Admin@123</p>
+                <p className="text-blue-200 mb-2"><strong>Employee:</strong> employee@vtgroups.com / Emp@123</p>
+                <p className="text-blue-200"><strong>Customer:</strong> customer@vtgroups.com / Cust@123</p>
+              </div>
               <div className="grid grid-cols-3 gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => quickLogin("admin")}
-                  className="text-xs"
+                  className="text-xs h-9"
                 >
+                  <Shield className="h-3 w-3 mr-1" />
                   Admin
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => quickLogin("employee")}
-                  className="text-xs"
+                  className="text-xs h-9"
                 >
+                  <Users className="h-3 w-3 mr-1" />
                   Employee
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => quickLogin("customer")}
-                  className="text-xs"
+                  className="text-xs h-9"
                 >
+                  <Building2 className="h-3 w-3 mr-1" />
                   Customer
                 </Button>
               </div>

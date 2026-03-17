@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next'
-import { Analytics } from '@vercel/analytics/next'
 import { AuthProvider } from '@/context/AuthContext'
 import { Toaster } from 'sonner'
 import { Playfair_Display, DM_Sans } from 'next/font/google'
@@ -43,7 +42,6 @@ export default function RootLayout({
             {children}
           </AuthProvider>
           <Toaster richColors position="top-right" />
-          <Analytics />
         </GlobalErrorBoundary>
       </body>
     </html>
