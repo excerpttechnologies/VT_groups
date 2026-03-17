@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -64,7 +65,7 @@ export default function RegisterPage() {
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
           <div className="bg-white p-2 rounded-xl shadow-lg mb-4">
-            <img src="/VT-Groups.png" alt="VT Groups Logo" className="h-20 w-auto object-contain" />
+            <Image src="/VT-Groups.png" alt="VT Groups Logo" width={80} height={80} priority className="h-20 w-auto object-contain" />
           </div>
           <p className="text-muted-foreground text-center">
             AI-Powered Land Distribution & Installment Management

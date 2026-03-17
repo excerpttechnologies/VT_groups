@@ -8,23 +8,42 @@ const JWT_SECRET = new TextEncoder().encode(
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const token = request.cookies.get('token')?.value;
 
-  // Paths that don't require authentication
+  // ✅ STEP 1: Allow static files and Next.js internals (FIRST CHECK)
+  // Files with extensions like .png, .jpg, .css, .js, .svg, .ico, .woff, etc.
+  if (pathname.includes('.')) {
+    return NextResponse.next();
+  }
+
+  // Always allow Next.js internal routes
+  if (pathname.startsWith('/_next/')) {
+    return NextResponse.next();
+  }
+
+  // ✅ STEP 2: Public routes that don't need authentication
   const isPublicPath = 
     pathname === '/' || 
     pathname === '/login' || 
-    pathname === '/register' || 
+    pathname === '/register';
+
+  // ✅ STEP 3: API routes (seed, auth routes)
+  const isPublicAPI = 
     pathname.startsWith('/api/auth') ||
     pathname.includes('/api/seed');
 
+  if (isPublicPath || isPublicAPI) {
+    return NextResponse.next();
+  }
+
+  // ✅ STEP 4: Check authentication
+  const token = request.cookies.get('token')?.value;
+
   if (!token) {
-    if (isPublicPath) {
-      return NextResponse.next();
-    }
+    // Not authenticated - redirect to login (except for public paths we already handled)
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
+  // ✅ STEP 5: Verify token and check role-based access
   try {
     const { payload }: any = await jwtVerify(token, JWT_SECRET);
     const userRole = payload.role;
@@ -32,21 +51,21 @@ export async function middleware(request: NextRequest) {
     // Protect Admin routes
     if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
       if (userRole !== 'admin') {
-        return NextResponse.redirect(new URL('/login', request.url));
+        return NextResponse.redirect(new URL('/', request.url));
       }
     }
 
     // Protect Employee routes
     if (pathname.startsWith('/employee')) {
       if (userRole !== 'admin' && userRole !== 'employee') {
-        return NextResponse.redirect(new URL('/login', request.url));
+        return NextResponse.redirect(new URL('/', request.url));
       }
     }
 
     // Protect Customer routes
     if (pathname.startsWith('/customer')) {
       if (userRole !== 'admin' && userRole !== 'employee' && userRole !== 'customer') {
-        return NextResponse.redirect(new URL('/login', request.url));
+        return NextResponse.redirect(new URL('/', request.url));
       }
     }
 
@@ -59,25 +78,26 @@ export async function middleware(request: NextRequest) {
 
     return NextResponse.next();
   } catch (error) {
-    // Invalid token
-    if (!isPublicPath) {
-      const response = NextResponse.redirect(new URL('/login', request.url));
-      response.cookies.delete('token');
-      return response;
-    }
-    return NextResponse.next();
+    console.error('[Auth] Token verification failed:', error);
+    // Invalid token - redirect to login
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 }
 
-// See "Matching Paths" below to learn more
+/**
+ * MATCHER CONFIGURATION
+ * 
+ * Only run middleware on routes that need protection.
+ * Static files and Next.js internals are excluded here for better performance.
+ * 
+ * Simplified matcher that works reliably with Next.js 16+
+ */
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
+    // Match app routes, API routes, but exclude:
+    // - Static files (handled by the pathname.includes('.') check in middleware)
+    // - Next.js internals (handled by the pathname.startsWith('/_next/') check)
+    // - Favicon (handled by explicit check)
     '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };

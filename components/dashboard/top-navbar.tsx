@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -50,7 +51,7 @@ export function TopNavbar({ user, userRole }: TopNavbarProps) {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/10 bg-[#0A0F1E]/85 px-4 md:px-6 backdrop-blur-xl transition-all duration-300">
       <div className="flex items-center gap-3">
-        <img src="/VT-Groups.png" alt="VT Groups Logo" className="h-10 w-10 rounded-lg border border-white/10 object-contain" />
+        <Image src="/VT-Groups.png" alt="VT Groups Logo" width={40} height={40} className="h-10 w-10 rounded-lg border border-white/10 object-contain" />
         <div>
           <p className="text-sm font-semibold text-foreground">VT Groups</p>
           <p className="text-[11px] text-muted-foreground">Luxury Real Estate ERP</p>

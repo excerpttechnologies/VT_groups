@@ -434,7 +434,7 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <Link href="/" className="flex items-center gap-2">
               <div className="bg-white p-1 rounded-sm">
-                <img src="/VT-Groups.png" alt="VT Groups Logo" className="h-8 w-auto object-contain" />
+                <Image src="/VT-Groups.png" alt="VT Groups Logo" width={32} height={32} className="h-8 w-auto object-contain" />
               </div>
             </Link>
             <p className="text-sm text-muted-foreground">

@@ -41,7 +41,6 @@ export default function LoginPage() {
       await login({ email, password });
     } catch (error: any) {
       // login helper in AuthContext already shows toast
-      console.error("Login error:", error);
     } finally {
       setIsLoading(false);
     }

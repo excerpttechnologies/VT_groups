@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,7 +82,7 @@ export default function SettingsPage() {
               <div className="flex items-center gap-6">
                 <div className="relative">
                   <div className="h-24 w-24 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden">
-                    <img src="/VT-Groups.png" alt="Company Logo" className="h-20 w-auto object-contain" />
+                    <Image src="/VT-Groups.png" alt="Company Logo" width={80} height={80} className="h-20 w-auto object-contain" />
                   </div>
                   <Button
                     size="sm"
