@@ -39,8 +39,8 @@ export default function EmployeeDashboard() {
       setIsLoading(true);
       try {
         const [landsRes, paymentsRes] = await Promise.all([
-          fetch("/api/plots"),
-          fetch("/api/payments"),
+          fetch("/api/plots", { credentials: 'include' }),
+          fetch("/api/payments", { credentials: 'include' }),
         ]);
         const landsData = await landsRes.json();
         const paymentsData = await paymentsRes.json();

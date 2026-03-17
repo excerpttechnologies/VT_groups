@@ -38,7 +38,7 @@ export default function CustomerDashboard() {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch("/api/customers/me");
+        const res = await fetch("/api/customers/me", { credentials: 'include' });
         const result = await res.json();
         if (result.success) {
           setCustomer(result.data.customer);
