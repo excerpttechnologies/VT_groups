@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import * as authApi from '@/lib/api';
 import toast from 'react-hot-toast';
 
@@ -28,6 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
 
   const refreshUser = async () => {
     try {
@@ -56,8 +57,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    // Public pages - don't refresh auth
+    const publicPages = ['/', '/login', '/register'];
+    if (publicPages.includes(pathname)) {
+      setLoading(false);
+      return;
+    }
+
+    // Protected pages - refresh auth
     refreshUser();
-  }, []);
+  }, [pathname]);
 
   const login = async (credentials: any) => {
     setLoading(true);
