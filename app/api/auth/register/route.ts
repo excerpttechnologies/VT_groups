@@ -12,6 +12,9 @@ const registerSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(6, 'Password must be at least 6 characters'),
+  role: z.enum(['employee', 'customer'], {
+    errorMap: () => ({ message: 'Role must be either employee or customer' })
+  }),
   phone: z.string().optional(),
 });
 
@@ -26,25 +29,30 @@ export async function POST(req: NextRequest) {
       return apiError('Validation failed', 400, validated.error.format());
     }
 
-    const { name, email, password, phone } = validated.data;
+    const { name, email, password, phone, role } = validated.data;
 
-    // 2. Check email uniqueness
+    // 2. Security check: Reject 'admin' role attempts (should never happen with validation above, but extra safety)
+    if (role === 'admin') {
+      return apiError('Unauthorized role selection', 403);
+    }
+
+    // 3. Check email uniqueness
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return apiError('Email already registered', 409);
     }
 
-    // 3. Create User with role: 'customer'
+    // 4. Create User with selected role
     // Model pre-save hook will hash the password
     const user = await User.create({
       name,
       email,
       password,
       phone,
-      role: 'customer',
+      role: role,
     });
 
-    // 4. Create Customer profile for customer role
+    // 5. Create Customer profile for customer role
     if (user.role === 'customer') {
       try {
         await Customer.create({
@@ -59,7 +67,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 5. Set JWT cookie
+    // 6. Set JWT cookie
     const token = signToken({
       id: user._id,
       email: user.email,
@@ -75,14 +83,14 @@ export async function POST(req: NextRequest) {
       maxAge: 60 * 60 * 24 * 7,
     });
 
-    // 6. Send welcome email
+    // 7. Send welcome email
     try {
       await sendWelcomeEmail(user);
     } catch (emailError) {
       console.error('Failed to send welcome email:', emailError);
     }
 
-    // 7. Log activity
+    // 8. Log activity
     await logActivity({
       userId: user._id.toString(),
       action: 'User registered',

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Building2, Lock, Mail, User, ArrowRight, Shield, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -20,6 +21,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [role, setRole] = useState<'employee' | 'customer' | ''>("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -27,7 +29,7 @@ export default function RegisterPage() {
     e.preventDefault();
     setErrorMsg("");
 
-    if (!name || !email || !password || !confirmPassword) {
+    if (!name || !email || !password || !confirmPassword || !role) {
       toast.error("Please fill in all fields");
       return;
     }
@@ -47,7 +49,7 @@ export default function RegisterPage() {
     setIsLoading(true);
     
     try {
-      await register({ name, email, password });
+      await register({ name, email, password, role });
     } catch (error: any) {
       setErrorMsg(error.message || "Registration failed");
       console.error("Registration error:", error);
@@ -115,6 +117,19 @@ export default function RegisterPage() {
                     onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="role">Account Type</Label>
+                <Select value={role} onValueChange={(value) => setRole(value as 'employee' | 'customer')}>
+                  <SelectTrigger id="role">
+                    <SelectValue placeholder="Select your account type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="customer">Customer</SelectItem>
+                    <SelectItem value="employee">Employee</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">

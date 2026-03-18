@@ -66,6 +66,9 @@ export default function LandsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [isLoadingDropdowns, setIsLoadingDropdowns] = useState(false);
   
   // Form State
   const [formData, setFormData] = useState({
@@ -76,6 +79,8 @@ export default function LandsPage() {
     totalPrice: 0,
     plotType: "Residential",
     description: "",
+    customerId: "",
+    employeeId: "",
   });
 
   const fetchLands = async () => {
@@ -95,6 +100,30 @@ export default function LandsPage() {
       toast.error("Failed to fetch plots");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchCustomersAndEmployees = async () => {
+    setIsLoadingDropdowns(true);
+    try {
+      const [customersRes, employeesRes] = await Promise.all([
+        fetch("/api/customers"),
+        fetch("/api/admin/employees")
+      ]);
+      
+      const customersResult = await customersRes.json();
+      const employeesResult = await employeesRes.json();
+      
+      if (customersResult.success) {
+        setCustomers(Array.isArray(customersResult.data) ? customersResult.data : []);
+      }
+      if (employeesResult.success) {
+        setEmployees(Array.isArray(employeesResult.data) ? employeesResult.data : []);
+      }
+    } catch (error) {
+      console.log("Failed to fetch customers/employees");
+    } finally {
+      setIsLoadingDropdowns(false);
     }
   };
 
@@ -124,6 +153,8 @@ export default function LandsPage() {
             totalPrice: 0,
             plotType: "Residential",
             description: "",
+            customerId: "",
+            employeeId: "",
           });
       } else {
         toast.error(result.message || "Failed to add plot");
@@ -170,7 +201,12 @@ export default function LandsPage() {
             Manage all land plots and their details
           </p>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+          setIsAddDialogOpen(open);
+          if (open) {
+            fetchCustomersAndEmployees();
+          }
+        }}>
           <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus className="h-4 w-4" />
@@ -263,6 +299,40 @@ export default function LandsPage() {
                   value={formData.description}
                   onChange={e => setFormData({...formData, description: e.target.value})}
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="customerId">Customer (Optional)</Label>
+                  <Select value={formData.customerId} onValueChange={v => setFormData({...formData, customerId: v})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select customer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {customers.map((customer) => (
+                        <SelectItem key={customer._id} value={customer._id}>
+                          {customer.name} ({customer.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="employeeId">Employee (Optional)</Label>
+                  <Select value={formData.employeeId} onValueChange={v => setFormData({...formData, employeeId: v})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select employee" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {employees.map((employee) => (
+                        <SelectItem key={employee._id} value={employee._id}>
+                          {employee.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
             <DialogFooter>
