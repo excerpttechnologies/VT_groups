@@ -5,6 +5,20 @@ import { useRouter, usePathname } from 'next/navigation';
 import * as authApi from '@/lib/api';
 import toast from 'react-hot-toast';
 
+// Helper function to safely get error message
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  if (error && typeof error === 'object' && 'message' in error) {
+    return String((error as any).message);
+  }
+  return 'An unknown error occurred';
+}
+
 interface User {
   id: string;
   name: string;
@@ -109,15 +123,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           router.push('/customer');
         }
       } else {
-        console.error("❌ Login failed:", res.message);
+        console.error("Login failed:", res.message);
         setLoading(false);
         toast.error(res.message || 'Login failed');
         throw new Error(res.message || 'Login failed');
       }
-    } catch (error: any) {
-      console.error("❌ Login error:", error);
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      console.log("Login error:", errorMessage);
       setLoading(false);
-      toast.error(error.message || 'Login failed');
+      toast.error(errorMessage || 'Login failed');
       throw error;
     }
   };
@@ -155,15 +170,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           router.push('/customer');
         }
       } else {
-        console.error("❌ Registration failed:", res.message);
+        console.error("Registration failed:", res.message);
         setLoading(false);
         toast.error(res.message || 'Registration failed');
         throw new Error(res.message || 'Registration failed');
       }
-    } catch (error: any) {
-      console.error("❌ Registration error:", error);
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      console.log("Registration error:", errorMessage);
       setLoading(false);
-      toast.error(error.message || 'Registration failed');
+      toast.error(errorMessage || 'Registration failed');
       throw error;
     }
   };

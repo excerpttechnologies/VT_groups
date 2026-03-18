@@ -77,6 +77,7 @@ export default function LoginPage() {
               alt="VT Groups Logo"
               width={120}
               height={80}
+              style={{ width: "auto", height: "auto" }}
               className="h-20 w-auto object-contain"
               priority
             />
@@ -173,9 +174,9 @@ export default function LoginPage() {
             </div>
 
             {/* Quick Access - Demo Only */}
-            {/* <div className="mt-6 pt-6 border-t border-border">
+            <div className="mt-6 pt-6 border-t border-border">
               <p className="text-sm font-semibold text-center mb-3">
-                🎯 Quick Demo Access
+                Quick Demo Access
               </p>
               <div className="bg-blue-950/30 border border-blue-900/50 rounded-lg p-3 mb-4 text-xs">
                 <p className="text-blue-200 mb-2"><strong>Admin:</strong> admin@vtgroups.com / Admin@123</p>
@@ -211,7 +212,7 @@ export default function LoginPage() {
                   Customer
                 </Button>
               </div>
-            </div> */}
+            </div>
           </CardContent>
         </Card>
 
