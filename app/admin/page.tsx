@@ -43,14 +43,17 @@ export default function AdminDashboard() {
   const { user } = useAuth();
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
+      setIsLoading(true);
+      setError(null);
       try {
         const response = await fetch("/api/admin/stats", { credentials: 'include' });
         const result = await response.json();
 
-        if (result.success) {
+        if (result.success && result.data) {
           const stats = {
             totalLands: Object.values(result.data.plots).reduce((a: any, b: any) => a + b, 0),
             availablePlots: result.data.plots.available,
@@ -71,10 +74,16 @@ export default function AdminDashboard() {
             ]
           };
           setData(stats);
+        } else {
+          const errorMsg = result.message || "Failed to load dashboard data";
+          setError(errorMsg);
+          toast.error(errorMsg);
         }
-      } catch (error) {
+      } catch (error: any) {
+        const errorMsg = error.message || "Failed to load dashboard data";
+        setError(errorMsg);
         console.error("Dashboard fetch error:", error);
-        toast.error("Failed to load dashboard data");
+        toast.error(errorMsg);
       } finally {
         setIsLoading(false);
       }
@@ -92,7 +101,23 @@ export default function AdminDashboard() {
     );
   }
 
-  if (!data) return <div>Failed to load data</div>;
+  if (error || !data) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px]">
+        <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+        <h2 className="text-xl font-semibold mb-2">Unable to Load Dashboard</h2>
+        <p className="text-muted-foreground text-center max-w-md mb-6">
+          {error || "Dashboard data could not be retrieved. Please contact support if this issue persists."}
+        </p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

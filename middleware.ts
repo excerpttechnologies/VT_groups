@@ -26,16 +26,16 @@ export async function middleware(request: NextRequest) {
     pathname === '/login' || 
     pathname === '/register';
 
-  // ✅ STEP 3: API routes (seed, auth routes)
-  const isPublicAPI = 
-    pathname.startsWith('/api/auth') ||
-    pathname.includes('/api/seed');
-
-  if (isPublicPath || isPublicAPI) {
+  // ✅ STEP 3: API routes - Let all API routes through, authentication handled at route level
+  if (pathname.startsWith('/api/')) {
     return NextResponse.next();
   }
 
-  // ✅ STEP 4: Check authentication
+  if (isPublicPath) {
+    return NextResponse.next();
+  }
+
+  // ✅ STEP 4: Check authentication for protected routes
   const token = request.cookies.get('token')?.value;
 
   if (!token) {

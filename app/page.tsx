@@ -96,14 +96,15 @@ export default function LandingPage() {
       <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/80 backdrop-blur-lg">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-2">
-            <div className="bg-white p-1 rounded-md">
+            <div className="bg-white p-1 rounded-md" style={{ width: 'auto', height: '40px' }}>
               <Image
                 src="/VT-Groups.png"
                 alt="VT Groups Logo"
                 width={120}
                 height={40}
-                className="h-10 w-auto object-contain"
+                className="h-full w-auto object-contain"
                 priority
+                style={{ width: 'auto', height: '100%' }}
               />
             </div>
           </Link>
@@ -433,8 +434,8 @@ export default function LandingPage() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <Link href="/" className="flex items-center gap-2">
-              <div className="bg-white p-1 rounded-sm">
-                <Image src="/VT-Groups.png" alt="VT Groups Logo" width={32} height={32} className="h-8 w-auto object-contain" />
+              <div className="bg-white p-1 rounded-sm" style={{ width: 'auto', height: '32px' }}>
+                <Image src="/VT-Groups.png" alt="VT Groups Logo" width={32} height={32} className="h-full w-auto object-contain" style={{ width: 'auto', height: '100%' }} />
               </div>
             </Link>
             <p className="text-sm text-muted-foreground">

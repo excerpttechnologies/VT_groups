@@ -84,7 +84,7 @@ export function Sidebar({ userRole, collapsed, onToggle }: SidebarProps) {
         <div className="flex h-16 flex-col justify-center border-b border-sidebar-border px-4 pt-2 pb-2">
           {!collapsed ? (
             <Link href="/" className="flex items-center gap-2">
-              <Image src="/VT-Groups.png" alt="VT Groups Logo" width={48} height={48} className="h-12 w-auto object-contain" />
+              <Image src="/VT-Groups.png" alt="VT Groups Logo" width={48} height={48} className="h-12 w-auto object-contain" style={{ width: 'auto', height: '100%' }} />
               <div className="flex flex-col">
                 <span className="text-lg font-semibold text-sidebar-foreground tracking-tight">
                   VT Groups
@@ -95,7 +95,7 @@ export function Sidebar({ userRole, collapsed, onToggle }: SidebarProps) {
               </div>
             </Link>
           ) : (
-            <Image src="/VT-Groups.png" alt="Logo" width={32} height={32} className="mx-auto h-8 w-8 object-contain" />
+            <Image src="/VT-Groups.png" alt="Logo" width={32} height={32} className="mx-auto h-8 w-8 object-contain" style={{ width: 'auto', height: 'auto' }} />
           )}
           {!collapsed && <div className="mt-2 h-px w-full bg-gradient-to-r from-gold via-gold/40 to-transparent" />}
         </div>

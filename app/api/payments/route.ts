@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server';
 import connectDB from '@/lib/mongodb';
+// Import all models to ensure they are registered with Mongoose
+import '@/models';
 import Payment from '@/models/Payment';
 import Customer from '@/models/Customer';
 import Plot from '@/models/Plot';

@@ -33,10 +33,12 @@ export default function EmployeeDashboard() {
   const [lands, setLands] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
+      setError(null);
       try {
         const [landsRes, paymentsRes] = await Promise.all([
           fetch("/api/plots", { credentials: 'include' }),
@@ -58,13 +60,25 @@ export default function EmployeeDashboard() {
           : [];
 
         if (landsData.success) setLands(landsArray);
+        else if (landsData.message) setError(landsData.message);
+        
         if (paymentsData.success) setPayments(paymentsArray);
-      } catch (error) {
-        toast.error("Failed to load dashboard data");
+        else if (paymentsData.message && !error) setError(paymentsData.message);
+        
+        if (!landsData.success && !paymentsData.success) {
+          const errorMsg = landsData.message || paymentsData.message || "Failed to load dashboard data";
+          setError(errorMsg);
+          toast.error(errorMsg);
+        }
+      } catch (error: any) {
+        const errorMsg = error.message || "Failed to load dashboard data";
+        setError(errorMsg);
+        toast.error(errorMsg);
       } finally {
         setIsLoading(false);
       }
-    };    fetchData();
+    };    
+    fetchData();
   }, []);
 
   // Filter lands assigned to this employee
@@ -83,6 +97,24 @@ export default function EmployeeDashboard() {
       <div className="flex flex-col items-center justify-center min-h-[400px]">
         <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
         <p className="text-muted-foreground">Loading your dashboard...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px]">
+        <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
+        <h2 className="text-xl font-semibold mb-2">Unable to Load Dashboard</h2>
+        <p className="text-muted-foreground text-center max-w-md mb-6">
+          {error || "Dashboard data could not be retrieved. Please contact support if this issue persists."}
+        </p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+        >
+          Retry
+        </button>
       </div>
     );
   }

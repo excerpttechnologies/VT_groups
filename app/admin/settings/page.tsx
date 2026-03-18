@@ -82,7 +82,7 @@ export default function SettingsPage() {
               <div className="flex items-center gap-6">
                 <div className="relative">
                   <div className="h-24 w-24 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden">
-                    <Image src="/VT-Groups.png" alt="Company Logo" width={80} height={80} className="h-20 w-auto object-contain" />
+                    <Image src="/VT-Groups.png" alt="Company Logo" width={80} height={80} className="h-20 w-auto object-contain" style={{ width: 'auto', height: '100%' }} />
                   </div>
                   <Button
                     size="sm"

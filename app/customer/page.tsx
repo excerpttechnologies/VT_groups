@@ -33,25 +33,68 @@ export default function CustomerDashboard() {
   const [customer, setCustomer] = useState<any>(null);
   const [payments, setPayments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
+      setError(null);
       try {
+        console.log("🔄 Fetching customer data...", { userId: user?.id });
         const res = await fetch("/api/customers/me", { credentials: 'include' });
         const result = await res.json();
-        if (result.success) {
-          setCustomer(result.data.customer);
-          setPayments(result.data.payments);
+        console.log("✅ API Response:", result);
+        
+        if (result.success && result.data) {
+          const customerData = result.data.customer || result.data;
+          const paymentsData = result.data.payments || [];
+          
+          console.log("✅ Customer Data Loaded:", {
+            id: customerData._id,
+            status: customerData.status,
+            totalAmount: customerData.totalAmount,
+            paidAmount: customerData.paidAmount
+          });
+          
+          setCustomer(customerData);
+          setPayments(Array.isArray(paymentsData) ? paymentsData : []);
+        } else {
+          // Set default customer data instead of showing error
+          console.log("⚠️ No customer data found, using defaults");
+          setCustomer({
+            _id: "new",
+            userId: user?.id,
+            totalAmount: 0,
+            paidAmount: 0,
+            status: "Active"
+          });
+          setPayments([]);
         }
-      } catch (error) {
-        toast.error("Failed to load dashboard data");
+      } catch (error: any) {
+        const errorMessage = error.message || "Failed to load dashboard data";
+        console.error("❌ Fetch Error:", errorMessage);
+        
+        // Still show dashboard with default data on error
+        setCustomer({
+          _id: "new",
+          userId: user?.id,
+          totalAmount: 0,
+          paidAmount: 0,
+          status: "Active"
+        });
+        setPayments([]);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchData();
-  }, []);
+    
+    if (user?.id) {
+      console.log("👤 User loaded, fetching customer data...");
+      fetchData();
+    } else {
+      console.log("⏳ Waiting for user...");
+    }
+  }, [user?.id]);
 
   const totalPaid = customer?.paidAmount || 0;
   const totalAmount = customer?.totalAmount || 0;
@@ -69,11 +112,30 @@ export default function CustomerDashboard() {
     );
   }
 
+  // Always show dashboard, even if customer is empty or has no data
+  if (!customer) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">
+            Welcome, {user?.name?.split(" ")[0] || "Customer"}!
+          </h1>
+          <p className="text-muted-foreground">
+            Track your land purchases and installment payments
+          </p>
+        </div>
+        <Card className="text-center p-8">
+          <p className="text-muted-foreground">Initializing your dashboard...</p>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">
+      <div className="bg-gradient-to-r from-primary/5 to-transparent rounded-lg p-6 border border-primary/10">
+        <h1 className="text-3xl font-bold text-foreground mb-2">
           Welcome, {user?.name?.split(" ")[0] || "Customer"}!
         </h1>
         <p className="text-muted-foreground">
@@ -81,68 +143,65 @@ export default function CustomerDashboard() {
         </p>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards - Always visible */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="My Lands"
-          value={customer?.assignedPlot ? 1 : 0}
+          value={customer?.assignedPlot ? "1" : "0"}
           subtitle="Total plots owned"
           icon={Map}
         />
         <StatsCard
           title="Total Paid"
           value={formatCurrency(totalPaid)}
-          subtitle="Amount cleared"
+          subtitle={totalAmount > 0 ? "Amount cleared" : "No active payments"}
           icon={IndianRupee}
-          trend={{ value: 15, isPositive: true }}
         />
         <StatsCard
           title="Pending Balance"
           value={formatCurrency(Math.max(0, pendingBalance))}
-          subtitle="Amount remaining"
+          subtitle={totalAmount > 0 ? "Amount remaining" : "No pending balance"}
           icon={Clock}
           className="border-l-4 border-l-yellow-500"
         />
         <StatsCard
-          title="Total Properties"
-          value={customer?.assignedPlot ? 1 : 0}
-          subtitle={`${customer?.status === 'Active' ? 1 : 0} active`}
-          icon={Calendar}
+          title="Account Status"
+          value={customer?.status || "Active"}
+          subtitle={`${customer?.status === 'Active' ? '✓ Active' : 'Inactive'}`}
+          icon={CheckCircle2}
+          className="border-l-4 border-l-green-500"
         />
       </div>
 
 
       {/* Overall Progress */}
-      {totalAmount > 0 && (
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-semibold">Overall Payment Progress</h3>
-                <p className="text-sm text-muted-foreground">
-                  Based on your plot {customer?.assignedPlot?.plotNumber}
-                </p>
-              </div>
-              <div className="text-right">
-                <span className="text-2xl font-bold text-primary">
-                  {overallProgress.toFixed(0)}%
-                </span>
-                <p className="text-sm text-muted-foreground">Complete</p>
-              </div>
-
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold">Overall Payment Progress</h3>
+              <p className="text-sm text-muted-foreground">
+                {totalAmount > 0 ? `Based on your plot ${customer?.assignedPlot?.plotNumber}` : "No active plots yet"}
+              </p>
             </div>
-            <Progress value={overallProgress} className="h-4 mt-4" />
-            <div className="flex justify-between mt-2 text-sm">
-              <span className="text-muted-foreground">
-                Paid: {formatCurrency(totalPaid)}
+            <div className="text-right">
+              <span className="text-2xl font-bold text-primary">
+                {totalAmount > 0 ? overallProgress.toFixed(0) : "0"}%
               </span>
-              <span className="text-muted-foreground">
-                Remaining: {formatCurrency(Math.max(0, pendingBalance))}
-              </span>
+              <p className="text-sm text-muted-foreground">Complete</p>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+          <Progress value={totalAmount > 0 ? overallProgress : 0} className="h-4 mt-4" />
+          <div className="flex justify-between mt-2 text-sm">
+            <span className="text-muted-foreground">
+              Paid: {formatCurrency(totalPaid)}
+            </span>
+            <span className="text-muted-foreground">
+              Total: {formatCurrency(totalAmount > 0 ? totalAmount : 0)}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Main Content */}
       <div className="grid gap-6 lg:grid-cols-2">
@@ -156,9 +215,10 @@ export default function CustomerDashboard() {
           </CardHeader>
           <CardContent className="space-y-4">
             {!customer?.assignedPlot ? (
-              <p className="text-center text-muted-foreground py-6">
-                No land plots assigned yet.
-              </p>
+              <div className="text-center text-muted-foreground py-6">
+                <p className="mb-3">No land plots assigned yet.</p>
+                <p className="text-sm mb-4">Contact your assigned employee to get started with your first land purchase.</p>
+              </div>
             ) : (
                 <div
                   key={customer.assignedPlot._id}
@@ -206,15 +266,16 @@ export default function CustomerDashboard() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-primary" />
+              <CreditCard className="h-5 w-5 text-primary" />
               Recent Payments
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {recentPayments.length === 0 ? (
-              <p className="text-center text-muted-foreground py-6">
-                No payments recorded yet.
-              </p>
+              <div className="text-center text-muted-foreground py-6">
+                <p className="mb-3">No payments recorded yet.</p>
+                <p className="text-sm">Your payment history will appear here.</p>
+              </div>
             ) : (
               recentPayments.map((payment) => (
                 <div
@@ -263,6 +324,44 @@ export default function CustomerDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Quick Links Section */}
+      <Card className="bg-gradient-to-r from-primary/5 to-secondary/5 border-primary/20">
+        <CardHeader>
+          <CardTitle className="text-lg">Quick Links</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 md:grid-cols-3">
+            <Link href="/customer/lands">
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-background hover:bg-secondary/50 transition-colors cursor-pointer">
+                <Map className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="font-medium text-sm">View All Lands</p>
+                  <p className="text-xs text-muted-foreground">See your properties</p>
+                </div>
+              </div>
+            </Link>
+            <Link href="/customer/installments">
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-background hover:bg-secondary/50 transition-colors cursor-pointer">
+                <Calendar className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="font-medium text-sm">Installments</p>
+                  <p className="text-xs text-muted-foreground">Payment schedule</p>
+                </div>
+              </div>
+            </Link>
+            <Link href="/customer/payments">
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-background hover:bg-secondary/50 transition-colors cursor-pointer">
+                <IndianRupee className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="font-medium text-sm">Payments</p>
+                  <p className="text-xs text-muted-foreground">Payment history</p>
+                </div>
+              </div>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

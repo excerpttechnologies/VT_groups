@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
+import Customer from '@/models/Customer';
 import { signToken, apiError, apiResponse } from '@/lib/auth';
 import { sendWelcomeEmail } from '@/lib/emailService';
 import { logActivity } from '@/lib/activityLogger';
@@ -43,7 +44,22 @@ export async function POST(req: NextRequest) {
       role: 'customer',
     });
 
-    // 4. Set JWT cookie
+    // 4. Create Customer profile for customer role
+    if (user.role === 'customer') {
+      try {
+        await Customer.create({
+          userId: user._id,
+          totalAmount: 0,
+          paidAmount: 0,
+          status: 'Active',
+        });
+      } catch (customerError) {
+        console.error('Failed to create customer profile:', customerError);
+        // Continue even if customer profile creation fails
+      }
+    }
+
+    // 5. Set JWT cookie
     const token = signToken({
       id: user._id,
       email: user.email,
@@ -59,14 +75,14 @@ export async function POST(req: NextRequest) {
       maxAge: 60 * 60 * 24 * 7,
     });
 
-    // 5. Send welcome email
+    // 6. Send welcome email
     try {
       await sendWelcomeEmail(user);
     } catch (emailError) {
       console.error('Failed to send welcome email:', emailError);
     }
 
-    // 6. Log activity
+    // 7. Log activity
     await logActivity({
       userId: user._id.toString(),
       action: 'User registered',

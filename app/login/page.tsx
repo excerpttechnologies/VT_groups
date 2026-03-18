@@ -173,7 +173,7 @@ export default function LoginPage() {
             </div>
 
             {/* Quick Access - Demo Only */}
-            <div className="mt-6 pt-6 border-t border-border">
+            {/* <div className="mt-6 pt-6 border-t border-border">
               <p className="text-sm font-semibold text-center mb-3">
                 🎯 Quick Demo Access
               </p>
@@ -211,7 +211,7 @@ export default function LoginPage() {
                   Customer
                 </Button>
               </div>
-            </div>
+            </div> */}
           </CardContent>
         </Card>
 

@@ -64,46 +64,107 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Protected pages - refresh auth
+    // Only refresh if we don't already have a user
+    if (user) {
+      console.log("✅ User already loaded, skipping refresh");
+      setLoading(false);
+      return;
+    }
+
+    // Protected pages - refresh auth only if no user
+    console.log("🔄 Refreshing auth for protected page:", pathname);
     refreshUser();
-  }, [pathname]);
+  }, [pathname, user]);
 
   const login = async (credentials: any) => {
     setLoading(true);
     try {
+      console.log("🔐 Logging in with:", credentials.email);
       const res: any = await authApi.login(credentials);
+      console.log("📡 Login response:", res);
+      
       if (res.success) {
-        const userData = res.data.user;
+        const userData = res.data.user || res.data;
+        console.log("✅ Setting user:", userData);
+        
         setUser(userData);
+        setLoading(false);
+        
+        // Small delay to ensure state is updated
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         toast.success(`Welcome back, ${userData.name}!`);
         
         // Redirect based on role
-        if (userData.role === 'admin') router.push('/admin');
-        else if (userData.role === 'employee') router.push('/employee');
-        else router.push('/customer');
+        if (userData.role === 'admin') {
+          console.log("➡️ Redirecting to /admin");
+          router.push('/admin');
+        }
+        else if (userData.role === 'employee') {
+          console.log("➡️ Redirecting to /employee");
+          router.push('/employee');
+        }
+        else {
+          console.log("➡️ Redirecting to /customer");
+          router.push('/customer');
+        }
+      } else {
+        console.error("❌ Login failed:", res.message);
+        setLoading(false);
+        toast.error(res.message || 'Login failed');
+        throw new Error(res.message || 'Login failed');
       }
     } catch (error: any) {
+      console.error("❌ Login error:", error);
+      setLoading(false);
       toast.error(error.message || 'Login failed');
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
   const register = async (data: any) => {
     setLoading(true);
     try {
+      console.log("📝 Registering user:", data.email);
       const res: any = await authApi.register(data);
+      console.log("📡 Register response:", res);
+      
       if (res.success) {
-        setUser(res.data);
+        const userData = res.data.user || res.data;
+        console.log("✅ Registration successful, setting user:", userData);
+        
+        setUser(userData);
+        setLoading(false);
+        
+        // Small delay to ensure state is updated
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         toast.success('Registration successful!');
-        router.push('/customer');
+        
+        // Redirect based on role
+        if (userData.role === 'admin') {
+          console.log("➡️ Redirecting to /admin");
+          router.push('/admin');
+        }
+        else if (userData.role === 'employee') {
+          console.log("➡️ Redirecting to /employee");
+          router.push('/employee');
+        }
+        else {
+          console.log("➡️ Redirecting to /customer");
+          router.push('/customer');
+        }
+      } else {
+        console.error("❌ Registration failed:", res.message);
+        setLoading(false);
+        toast.error(res.message || 'Registration failed');
+        throw new Error(res.message || 'Registration failed');
       }
     } catch (error: any) {
+      console.error("❌ Registration error:", error);
+      setLoading(false);
       toast.error(error.message || 'Registration failed');
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
