@@ -21,7 +21,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState<'employee' | 'customer' | ''>("");
+  const [role, setRole] = useState<'admin' | 'employee' | 'customer' | ''>("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -50,8 +50,14 @@ export default function RegisterPage() {
     
     try {
       await register({ name, email, password, role });
-    } catch (error: any) {
-      setErrorMsg(error.message || "Registration failed");
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof error === 'string'
+          ? error
+          : 'Registration failed';
+      setErrorMsg(message);
       console.error("Registration error:", error);
     } finally {
       setIsLoading(false);
@@ -121,11 +127,12 @@ export default function RegisterPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="role">Account Type</Label>
-                <Select value={role} onValueChange={(value) => setRole(value as 'employee' | 'customer')}>
+                <Select value={role} onValueChange={(value) => setRole(value as 'admin' | 'employee' | 'customer')}>
                   <SelectTrigger id="role">
                     <SelectValue placeholder="Select your account type" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="customer">Customer</SelectItem>
                     <SelectItem value="employee">Employee</SelectItem>
                   </SelectContent>

@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import connectDB from './mongodb';
+import mongoose from 'mongoose';
 import ActivityLog from '@/models/ActivityLog';
 
 interface LogParams {
@@ -28,8 +29,19 @@ export async function logActivity({
       userAgent = req.headers.get('user-agent') || '';
     }
 
+    // Ensure `userId` is stored as an ObjectId (prevents schema/cast issues).
+    let userObjectId: any = userId;
+    if (typeof userId === 'string') {
+      try {
+        userObjectId = new mongoose.Types.ObjectId(userId);
+      } catch {
+        // Fall back to original value; the create() will still validate/cast or fail.
+        userObjectId = userId;
+      }
+    }
+
     await ActivityLog.create({
-      userId,
+      userId: userObjectId,
       action,
       module,
       meta,

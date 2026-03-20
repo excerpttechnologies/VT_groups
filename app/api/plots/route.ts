@@ -8,10 +8,11 @@ import { logActivity } from '@/lib/activityLogger';
 import { z } from 'zod';
 
 const plotSchema = z.object({
+  plotNumber: z.string().min(3).optional(),
   location: z.string().min(2),
-  area: z.number().positive(),
+  area: z.coerce.number().positive(),
   areaUnit: z.enum(['sqft', 'sqyard', 'acre', 'gunta']).default('sqyard'),
-  totalPrice: z.number().positive(),
+  totalPrice: z.coerce.number().positive(),
   facing: z.enum(['East', 'West', 'North', 'South']).optional(),
   plotType: z.enum(['Residential', 'Commercial', 'Agricultural']).optional(),
   description: z.string().optional(),
@@ -19,8 +20,8 @@ const plotSchema = z.object({
   images: z.array(z.string()).optional(),
   documents: z.array(z.string()).optional(),
   amenities: z.array(z.string()).optional(),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
+  latitude: z.coerce.number().optional(),
+  longitude: z.coerce.number().optional(),
 });
 
 export async function GET(req: NextRequest) {
@@ -97,13 +98,51 @@ export async function POST(req: NextRequest) {
       return apiError('Validation failed', 400, validated.error.format());
     }
 
-    // Auto-generate plotNumber
-    const lastPlot = await Plot.findOne().sort({ createdAt: -1 });
-    let lastNum = 0;
-    if (lastPlot && lastPlot.plotNumber.startsWith('VT-')) {
-      lastNum = parseInt(lastPlot.plotNumber.split('-')[1]);
+    // Use provided plotNumber if present, else auto-generate.
+    let plotNumber = validated.data.plotNumber?.trim();
+    if (!plotNumber) {
+      // Auto-generate plotNumber with retry (handles concurrent creates).
+      const lastPlot = await Plot.findOne().sort({ createdAt: -1 }).select('plotNumber');
+      let lastNum = 0;
+      if (lastPlot && typeof lastPlot.plotNumber === 'string' && lastPlot.plotNumber.startsWith('VT-')) {
+        lastNum = parseInt(lastPlot.plotNumber.split('-')[1]) || 0;
+      }
+
+      let created: any = null;
+      for (let attempt = 0; attempt < 8; attempt++) {
+        plotNumber = generatePlotNumber(lastNum + attempt);
+        try {
+          created = await Plot.create({
+            ...validated.data,
+            plotNumber,
+            createdBy: admin._id
+          });
+          break;
+        } catch (err: any) {
+          // Retry on duplicate key only
+          if (err?.code === 11000) continue;
+          throw err;
+        }
+      }
+      if (!created) {
+        return apiError('Could not generate a unique plot number. Please retry.', 409);
+      }
+
+      await logActivity({
+        userId: admin._id.toString(),
+        action: `Created plot: ${plotNumber}`,
+        module: 'plots',
+        req
+      });
+
+      return apiResponse(created, 201);
     }
-    const plotNumber = generatePlotNumber(lastNum);
+
+    // If plotNumber is provided, enforce uniqueness cleanly
+    const exists = await Plot.findOne({ plotNumber }).select('_id');
+    if (exists) {
+      return apiError(`Plot number "${plotNumber}" already exists`, 409);
+    }
 
     const plot = await Plot.create({
       ...validated.data,
@@ -120,6 +159,9 @@ export async function POST(req: NextRequest) {
 
     return apiResponse(plot, 201);
   } catch (error: any) {
+    if (error?.code === 11000) {
+      return apiError('Duplicate plotNumber. Please use a different plot number.', 409);
+    }
     return apiError(error.message || 'Internal Server Error', 500);
   }
 }

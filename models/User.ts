@@ -12,6 +12,7 @@ export interface IUser extends Document {
   profilePhoto?: string;
   address?: string;
   mustChangePassword: boolean;
+  lastLoginAt?: Date;
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -35,11 +36,18 @@ const UserSchema: Schema = new Schema(
     profilePhoto: { type: String },
     address: { type: String },
     mustChangePassword: { type: Boolean, default: false },
+    lastLoginAt: { type: Date },
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Date },
   },
   { timestamps: true }
 );
+
+function looksLikeBcryptHash(maybeHash: unknown): maybeHash is string {
+  if (typeof maybeHash !== 'string') return false;
+  // bcrypt hashes start with $2a$, $2b$, $2y$ (or $2$ in some configs)
+  return /^\$2[aby]?\$\d{2}\$/.test(maybeHash) || /^\$2\$\d{2}\$/.test(maybeHash);
+}
 
 // Pre-save hook to hash password
 UserSchema.pre('save', async function (this: IUser) {
@@ -54,7 +62,16 @@ UserSchema.pre('save', async function (this: IUser) {
 
 // Method to compare password
 UserSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
-  return bcrypt.compare(candidatePassword, this.password || '');
+  const stored = this.password || '';
+  if (!stored) return false;
+
+  // Backward compatible: some legacy rows might store plaintext password.
+  // Prefer bcrypt whenever the stored value looks like a bcrypt hash.
+  if (looksLikeBcryptHash(stored)) {
+    return bcrypt.compare(candidatePassword, stored);
+  }
+
+  return stored === candidatePassword;
 };
 
 const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);

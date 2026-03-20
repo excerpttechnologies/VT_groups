@@ -137,7 +137,7 @@ export default function LandingPage() {
     }[role];
 
     try {
-      await login(credentials);
+      await login({ ...credentials, role });
     } catch (error) {
       console.error('Demo login failed');
     } finally {

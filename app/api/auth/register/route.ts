@@ -12,8 +12,8 @@ const registerSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  role: z.enum(['employee', 'customer'], {
-    errorMap: () => ({ message: 'Role must be either employee or customer' })
+  role: z.enum(['admin', 'employee', 'customer'], {
+    errorMap: () => ({ message: 'Role must be either admin, employee, or customer' })
   }),
   phone: z.string().optional(),
 });
@@ -30,14 +30,15 @@ export async function POST(req: NextRequest) {
     }
 
     const { name, email, password, phone, role } = validated.data;
+    const normalizedEmail = email.trim().toLowerCase();
 
-    // 2. Security check: Reject 'admin' role attempts (should never happen with validation above, but extra safety)
-    if (role === 'admin') {
+    // Safety: allow admin registration only in dev or when explicitly enabled.
+    if (role === 'admin' && process.env.NODE_ENV === 'production' && process.env.ALLOW_ADMIN_REGISTER !== 'true') {
       return apiError('Unauthorized role selection', 403);
     }
 
     // 3. Check email uniqueness
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return apiError('Email already registered', 409);
     }
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
     // Model pre-save hook will hash the password
     const user = await User.create({
       name,
-      email,
+      email: normalizedEmail,
       password,
       phone,
       role: role,

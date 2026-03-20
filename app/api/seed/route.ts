@@ -23,53 +23,94 @@ export async function GET(req: NextRequest) {
 
     await connectDB();
 
-    // Clear existing data (optional, but good for clean seed)
-    await Promise.all([
-      User.deleteMany({}),
-      Plot.deleteMany({}),
-      Customer.deleteMany({}),
-      Payment.deleteMany({}),
-      Settings.deleteMany({}),
-    ]);
+    // NOTE: Seeding should be idempotent. We avoid deleting collections here to prevent
+    // duplicate-key races and to preserve data when seed is hit multiple times.
 
     // 1. Create Demo Accounts
-    const admin = await User.create({
-      name: 'Admin User',
-      email: 'admin@vtgroups.com',
-      password: 'Admin@123',
-      role: 'admin',
-      isActive: true,
-      mustChangePassword: false
-    });
+    const configuredAdminEmail = (process.env.ADMIN_EMAIL || 'admin@vtgroups.com').trim().toLowerCase();
+    const configuredAdminPassword = process.env.ADMIN_PASSWORD || 'Admin@123';
+    const admin = await User.findOneAndUpdate(
+      { email: configuredAdminEmail },
+      {
+        $set: {
+          name: 'Admin User',
+          role: 'admin',
+          isActive: true,
+          mustChangePassword: false,
+        },
+        $setOnInsert: {
+          password: configuredAdminPassword, // will be hashed by pre-save only on create; handled below
+        },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    ).select('+password');
 
-    const employee = await User.create({
-      name: 'Employee User',
-      email: 'employee@vtgroups.com',
-      password: 'Emp@123',
-      role: 'employee',
-      isActive: true,
-      mustChangePassword: false,
-      createdBy: admin._id
-    });
+    // If admin was newly inserted via $setOnInsert, password may not have gone through pre-save in findOneAndUpdate.
+    // Ensure password is hashed by setting and saving when needed.
+    if (admin && typeof (admin as any).password === 'string' && !(admin as any).password.startsWith('$2')) {
+      (admin as any).password = configuredAdminPassword;
+      await admin.save();
+    }
 
-    const customerUser = await User.create({
-      name: 'Customer User',
-      email: 'customer@vtgroups.com',
-      password: 'Cust@123',
-      role: 'customer',
-      isActive: true,
-      mustChangePassword: false,
-      createdBy: employee._id
-    });
+    const employee = await User.findOneAndUpdate(
+      { email: 'employee@vtgroups.com' },
+      {
+        $set: {
+          name: 'Employee User',
+          role: 'employee',
+          isActive: true,
+          mustChangePassword: false,
+          createdBy: admin._id
+        },
+        $setOnInsert: { password: 'Emp@123' },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    ).select('+password');
+    if (employee && typeof (employee as any).password === 'string' && !(employee as any).password.startsWith('$2')) {
+      (employee as any).password = 'Emp@123';
+      await employee.save();
+    }
+
+    const customerUser = await User.findOneAndUpdate(
+      { email: 'customer@vtgroups.com' },
+      {
+        $set: {
+          name: 'Customer User',
+          role: 'customer',
+          isActive: true,
+          mustChangePassword: false,
+          createdBy: employee._id
+        },
+        $setOnInsert: { password: 'Cust@123' },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    ).select('+password');
+    if (customerUser && typeof (customerUser as any).password === 'string' && !(customerUser as any).password.startsWith('$2')) {
+      (customerUser as any).password = 'Cust@123';
+      await customerUser.save();
+    }
 
     // 2. Create Sample Plots
-    const plots = await Plot.insertMany([
-      { plotNumber: 'VT-001', location: 'Green Valley, Phase 1', area: 200, areaUnit: 'sqyard', totalPrice: 1500000, status: 'Available', plotType: 'Residential', createdBy: admin._id },
-      { plotNumber: 'VT-002', location: 'Green Valley, Phase 1', area: 150, areaUnit: 'sqyard', totalPrice: 1100000, status: 'Sold', plotType: 'Residential', createdBy: admin._id },
-      { plotNumber: 'VT-003', location: 'City Center', area: 50, areaUnit: 'sqyard', totalPrice: 5000000, status: 'Available', plotType: 'Commercial', createdBy: admin._id },
-      { plotNumber: 'VT-004', location: 'Highland Gardens', area: 250, areaUnit: 'sqyard', totalPrice: 2000000, status: 'Available', plotType: 'Residential', createdBy: admin._id },
-      { plotNumber: 'VT-005', location: 'Green Valley, Phase 2', area: 180, areaUnit: 'sqyard', totalPrice: 1350000, status: 'Available', plotType: 'Residential', createdBy: admin._id },
-    ]);
+    const seedPlots = [
+      { plotNumber: 'VT-001', location: 'Green Valley, Phase 1', area: 200, areaUnit: 'sqyard', totalPrice: 1500000, status: 'Available', plotType: 'Residential' },
+      { plotNumber: 'VT-002', location: 'Green Valley, Phase 1', area: 150, areaUnit: 'sqyard', totalPrice: 1100000, status: 'Sold', plotType: 'Residential' },
+      { plotNumber: 'VT-003', location: 'City Center', area: 50, areaUnit: 'sqyard', totalPrice: 5000000, status: 'Available', plotType: 'Commercial' },
+      { plotNumber: 'VT-004', location: 'Highland Gardens', area: 250, areaUnit: 'sqyard', totalPrice: 2000000, status: 'Available', plotType: 'Residential' },
+      { plotNumber: 'VT-005', location: 'Green Valley, Phase 2', area: 180, areaUnit: 'sqyard', totalPrice: 1350000, status: 'Available', plotType: 'Residential' },
+    ];
+
+    await Plot.bulkWrite(
+      seedPlots.map((p) => ({
+        updateOne: {
+          filter: { plotNumber: p.plotNumber },
+          update: { $set: { ...p, createdBy: admin._id } },
+          upsert: true,
+        }
+      })),
+      { ordered: false }
+    );
+
+    const plots = await Plot.find({ plotNumber: { $in: seedPlots.map(p => p.plotNumber) } }).sort({ plotNumber: 1 });
 
     // 3. Link customer with Plot VT-002
     const schedule = generateInstallmentSchedule({
@@ -79,30 +120,42 @@ export async function GET(req: NextRequest) {
       startDate: new Date('2024-01-01')
     });
 
-    const customer = await Customer.create({
-      userId: customerUser._id,
-      assignedPlot: plots[1]._id,
-      assignedEmployee: employee._id,
-      totalAmount: 1100000,
-      downPayment: 200000,
-      installmentMonths: 12,
-      installmentAmount: Math.ceil((1100000 - 200000) / 12),
-      installmentSchedule: schedule,
-      status: 'Active'
-    });
+    await Customer.findOneAndUpdate(
+      { userId: customerUser._id },
+      {
+        $set: {
+          userId: customerUser._id,
+          assignedPlot: plots.find(p => p.plotNumber === 'VT-002')?._id,
+          assignedEmployee: employee._id,
+          totalAmount: 1100000,
+          downPayment: 200000,
+          installmentMonths: 12,
+          installmentAmount: Math.ceil((1100000 - 200000) / 12),
+          installmentSchedule: schedule,
+          status: 'Active'
+        }
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
 
     // 4. Create Settings
-    await Settings.create({
-      companyName: "VT Groups",
-      email: "contact@vtgroups.com",
-      phone: "+91 9876543210",
-      address: "123 Business Hub, Hyderabad, India"
-    });
+    await Settings.findOneAndUpdate(
+      {},
+      {
+        $set: {
+          companyName: "VT Groups",
+          email: "contact@vtgroups.com",
+          phone: "+91 9876543210",
+          address: "123 Business Hub, Hyderabad, India"
+        }
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
 
     return apiResponse({ 
       message: 'Database seeded successfully',
       credentials: [
-        { role: 'admin', email: 'admin@vtgroups.com', pass: 'Admin@123' },
+        { role: 'admin', email: configuredAdminEmail, pass: configuredAdminPassword },
         { role: 'employee', email: 'employee@vtgroups.com', pass: 'Emp@123' },
         { role: 'customer', email: 'customer@vtgroups.com', pass: 'Cust@123' }
       ]
