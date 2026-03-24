@@ -3,8 +3,21 @@ import jwt from 'jsonwebtoken';
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_dev_only';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
+// ============= VALIDATE JWT_SECRET IN PRODUCTION =============
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  console.error('[🚨 CRITICAL] JWT_SECRET not set in production! Using insecure fallback.');
+  console.error('[🚨 CRITICAL] This will cause authentication failures if backend restarts.');
+  console.error('[🚨 CRITICAL] Set JWT_SECRET environment variable immediately!');
+}
+
 export function signToken(payload: object): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  try {
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    return token;
+  } catch (error: any) {
+    console.error('[JWT] Token signing failed:', error.message);
+    throw new Error('Token generation failed');
+  }
 }
 
 export function verifyToken(token: string): any {
@@ -12,7 +25,11 @@ export function verifyToken(token: string): any {
     const decoded = jwt.verify(token, JWT_SECRET);
     return decoded;
   } catch (error: any) {
-    console.error('[JWT] Verification failed:', error.message);
+    console.error('[JWT] Verification failed:', {
+      message: error.message,
+      code: error.code, // 'JsonWebTokenError' | 'TokenExpiredError' | 'NotBeforeError'
+      token_prefix: token?.substring(0, 20) + '...',
+    });
     return null;
   }
 }

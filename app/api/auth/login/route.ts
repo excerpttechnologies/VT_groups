@@ -59,143 +59,167 @@ async function ensureConfiguredAdmin({
 }
 
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
+  const requestId = Math.random().toString(36).substring(7);
+  
   try {
-    await connectDB();
-    const body = await req.json();
+    // ============= STEP 1: VALIDATE ENVIRONMENT =============
+    if (!process.env.JWT_SECRET) {
+      console.error(`[LOGIN-${requestId}] ❌ CRITICAL: JWT_SECRET not set. Using fallback (INSECURE!)`);
+    }
+    console.log(`[LOGIN-${requestId}] ℹ️ NODE_ENV: ${process.env.NODE_ENV}`);
 
-    // 1. Validate input
+    // ============= STEP 2: CONNECT TO DATABASE =============
+    console.log(`[LOGIN-${requestId}] 🔌 Connecting to MongoDB...`);
+    try {
+      await connectDB();
+      console.log(`[LOGIN-${requestId}] ✅ MongoDB connected`);
+    } catch (dbError: any) {
+      console.error(`[LOGIN-${requestId}] ❌ MongoDB connection failed:`, dbError.message);
+      return apiError('Database connection failed. Please try again.', 500);
+    }
+
+    // ============= STEP 3: PARSE REQUEST BODY =============
+    let body;
+    try {
+      body = await req.json();
+      console.log(`[LOGIN-${requestId}] 📨 Request body received. Email: ${body.email}`);
+    } catch (parseError: any) {
+      console.error(`[LOGIN-${requestId}] ❌ Failed to parse JSON:`, parseError.message);
+      return apiError('Invalid JSON in request body', 400);
+    }
+
+    // ============= STEP 4: VALIDATE INPUT SCHEMA =============
     const validated = loginSchema.safeParse(body);
     if (!validated.success) {
+      console.warn(`[LOGIN-${requestId}] ⚠️ Validation failed:`, validated.error.format());
       return apiError('Invalid input', 400, validated.error.format());
     }
 
     const { email, password, role } = validated.data;
     const normalizedEmail = email.trim().toLowerCase();
+    console.log(`[LOGIN-${requestId}] ✅ Input validation passed. Email: ${normalizedEmail}, Role: ${role || 'auto'}`);
 
-    // 2. Find user (include password)
-    const user = await User.findOne({ email: normalizedEmail }).select('+password');
+    // ============= STEP 5: FIND USER IN DATABASE =============
+    console.log(`[LOGIN-${requestId}] 🔍 Searching for user in database...`);
+    let user = await User.findOne({ email: normalizedEmail }).select('+password');
+    
     if (!user) {
-      // If configured admin email isn't in DB yet, bootstrap it (dev-only).
+      console.log(`[LOGIN-${requestId}] ℹ️ User not found. Attempting admin bootstrap (dev-only)...`);
+      
+      // Try to bootstrap admin if configured
       const didBootstrapAdmin = await ensureConfiguredAdmin({ email: normalizedEmail, password });
       if (didBootstrapAdmin) {
-        const adminUser = await User.findOne({ email: normalizedEmail }).select('+password');
-        if (!adminUser) {
-          return apiError('Invalid credentials', 401);
-        }
-        // Continue with adminUser.
-        const isMatch = await adminUser.comparePassword(password);
-        if (!isMatch) return apiError('Invalid credentials', 401);
-
-        if (role && role !== adminUser.role) return apiError('Invalid credentials', 401);
-
-        const storedPassword = adminUser.password as unknown;
-        const storedLooksBcrypt = looksLikeBcryptHash(storedPassword);
-        const now = new Date();
-        if (!storedLooksBcrypt) {
-          adminUser.password = password;
-          adminUser.lastLoginAt = now;
-          await adminUser.save();
-        } else {
-          await User.updateOne({ _id: adminUser._id }, { $set: { lastLoginAt: now } });
-        }
-
-        const token = signToken({
-          id: adminUser._id,
-          email: adminUser.email,
-          role: adminUser.role,
-          name: adminUser.name,
-        });
-
-        (await cookies()).set('token', token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          path: '/',
-          maxAge: 60 * 60 * 24 * 7, // 7 days
-        });
-
-        await logActivity({
-          userId: adminUser._id.toString(),
-          action: 'User logged in',
-          module: 'auth',
-          req,
-        });
-
-        return apiResponse({
-          user: {
-            id: adminUser._id,
-            name: adminUser.name,
-            email: adminUser.email,
-            role: adminUser.role,
-          },
-          mustChangePassword: adminUser.mustChangePassword,
-          lastLoginAt: adminUser.lastLoginAt,
-        }, 200, 'Login successful');
+        console.log(`[LOGIN-${requestId}] ✅ Admin bootstrapped successfully`);
+        user = await User.findOne({ email: normalizedEmail }).select('+password');
+      } else {
+        console.log(`[LOGIN-${requestId}] ❌ User not found & admin bootstrap failed`);
+        return apiError('Invalid credentials', 401);
       }
-
-      console.log(`[AUTH] Login failed: User not found for email: ${normalizedEmail}`);
-      return apiError('Invalid credentials', 401);
+    } else {
+      console.log(`[LOGIN-${requestId}] ✅ User found in database. ID: ${user._id}, Role: ${user.role}, Active: ${user.isActive}`);
     }
 
-    // 3. Check isActive
+    // ============= STEP 6: CHECK ACCOUNT STATUS =============
     if (!user.isActive) {
-      console.log(`[AUTH] Login failed: Account deactivated for email: ${normalizedEmail}`);
+      console.log(`[LOGIN-${requestId}] ❌ Account is deactivated for email: ${normalizedEmail}`);
       return apiError('Account is deactivated', 403);
     }
+    console.log(`[LOGIN-${requestId}] ✅ Account is active`);
 
-    // Optional: if UI provides role, ensure it matches DB role.
+    // ============= STEP 7: VALIDATE ROLE (IF PROVIDED) =============
     if (role && role !== user.role) {
+      console.log(`[LOGIN-${requestId}] ❌ Role mismatch. Expected: ${role}, Got: ${user.role}`);
       return apiError('Invalid credentials', 401);
     }
+    console.log(`[LOGIN-${requestId}] ✅ Role validation passed`);
 
-    // 4. Compare password
-    const isMatch = await user.comparePassword(password);
+    // ============= STEP 8: COMPARE PASSWORD =============
+    console.log(`[LOGIN-${requestId}] 🔐 Comparing password...`);
+    let isMatch = false;
+    try {
+      isMatch = await user.comparePassword(password);
+    } catch (compareError: any) {
+      console.error(`[LOGIN-${requestId}] ❌ Password comparison error:`, compareError.message);
+      return apiError('Password verification failed', 500);
+    }
+
     if (!isMatch) {
-      console.log(`[AUTH] Login failed: Invalid password for email: ${normalizedEmail}`);
+      console.log(`[LOGIN-${requestId}] ❌ Password mismatch for email: ${normalizedEmail}`);
       return apiError('Invalid credentials', 401);
     }
+    console.log(`[LOGIN-${requestId}] ✅ Password matched`);
 
-    // 4b. If the stored password was legacy plaintext, upgrade it to bcrypt on successful login.
+    // ============= STEP 9: UPGRADE PLAINTEXT PASSWORDS =============
     const storedPassword = user.password as unknown;
     const storedLooksBcrypt = looksLikeBcryptHash(storedPassword);
-    const now = new Date();
     if (!storedLooksBcrypt) {
-      user.password = password; // triggers pre('save') hashing
-      user.lastLoginAt = now;
+      console.log(`[LOGIN-${requestId}] 🔄 Upgrading plaintext password to bcrypt...`);
+      user.password = password;
+      user.lastLoginAt = new Date();
       await user.save();
+      console.log(`[LOGIN-${requestId}] ✅ Password upgraded to bcrypt`);
     } else {
-      // Avoid re-saving password field; just write lastLoginAt.
-      await User.updateOne({ _id: user._id }, { $set: { lastLoginAt: now } });
+      console.log(`[LOGIN-${requestId}] ✅ Password already bcrypted`);
+      await User.updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date() } });
     }
 
-    console.log(`[AUTH] Login successful for email: ${normalizedEmail}`);
-
-    // 5. Generate JWT
+    // ============= STEP 10: GENERATE JWT TOKEN =============
+    console.log(`[LOGIN-${requestId}] 🔑 Generating JWT token...`);
     const token = signToken({
       id: user._id,
       email: user.email,
       role: user.role,
       name: user.name,
     });
+    if (!token) {
+      console.error(`[LOGIN-${requestId}] ❌ JWT generation failed`);
+      return apiError('Token generation failed', 500);
+    }
+    console.log(`[LOGIN-${requestId}] ✅ JWT token generated. Token length: ${token.length} chars`);
 
-    // 6. Set httpOnly cookie
-    (await cookies()).set('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-    });
+    // ============= STEP 11: SET HTTP-ONLY COOKIE =============
+    console.log(`[LOGIN-${requestId}] 🍪 Setting httpOnly cookie...`);
+    try {
+      const cookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax' as const,
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+      };
+      console.log(`[LOGIN-${requestId}] 🍪 Cookie options:`, {
+        httpOnly: cookieOptions.httpOnly,
+        secure: cookieOptions.secure,
+        sameSite: cookieOptions.sameSite,
+        maxAge: `${cookieOptions.maxAge / 86400} days`,
+      });
+      
+      (await cookies()).set('token', token, cookieOptions);
+      console.log(`[LOGIN-${requestId}] ✅ Cookie set successfully`);
+    } catch (cookieError: any) {
+      console.error(`[LOGIN-${requestId}] ⚠️ Cookie setting error:`, cookieError.message);
+      // Continue anyway - token is valid even if cookie fails
+    }
 
-    // 7. Log activity
-    await logActivity({
-      userId: user._id.toString(),
-      action: 'User logged in',
-      module: 'auth',
-      req,
-    });
+    // ============= STEP 12: LOG ACTIVITY =============
+    try {
+      await logActivity({
+        userId: user._id.toString(),
+        action: 'User logged in',
+        module: 'auth',
+        req,
+      });
+      console.log(`[LOGIN-${requestId}] ✅ Activity logged`);
+    } catch (logError: any) {
+      console.warn(`[LOGIN-${requestId}] ⚠️ Activity logging failed:`, logError.message);
+      // Don't fail login if activity logging fails
+    }
 
-    // 8. Return response
+    // ============= STEP 13: RETURN SUCCESS RESPONSE =============
+    const duration = Date.now() - startTime;
+    console.log(`[LOGIN-${requestId}] ✅ LOGIN SUCCESSFUL in ${duration}ms`);
+    
     return apiResponse({
       user: {
         id: user._id,
@@ -208,7 +232,12 @@ export async function POST(req: NextRequest) {
     }, 200, 'Login successful');
 
   } catch (error: any) {
-    console.error('Login error:', error);
+    const duration = Date.now() - startTime;
+    console.error(`[LOGIN-${requestId}] ❌ UNEXPECTED ERROR after ${duration}ms:`, {
+      message: error.message,
+      code: error.code,
+      stack: error.stack?.split('\n').slice(0, 3),
+    });
     return apiError(error.message || 'Internal Server Error', 500);
   }
 }
