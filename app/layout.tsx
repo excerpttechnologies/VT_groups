@@ -20,9 +20,9 @@ export const metadata: Metadata = {
   title: 'VT Groups - Land Distribution & Installment Management',
   description: 'AI-Powered Land Distribution & Installment Management System',
   icons: {
-    icon: '/VT-Groups.png',
-    shortcut: '/VT-Groups.png',
-    apple: '/VT-Groups.png',
+    icon: '/VT-Groups-v2.png',
+    shortcut: '/VT-Groups-v2.png',
+    apple: '/VT-Groups-v2.png',
   },
 }
 export const viewport: Viewport = {

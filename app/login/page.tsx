@@ -73,7 +73,7 @@ export default function LoginPage() {
         <div className="flex flex-col items-center mb-8">
           <div className="bg-white p-2 rounded-xl shadow-lg mb-4">
             <Image
-              src="/VT-Groups.png"
+              src="/VT-Groups-v2.png"
               alt="VT Groups Logo"
               width={120}
               height={80}

@@ -51,8 +51,16 @@ export function TopNavbar({ user, userRole }: TopNavbarProps) {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/10 bg-[#0A0F1E]/85 px-4 md:px-6 backdrop-blur-xl transition-all duration-300">
       {/* <div className="flex items-center gap-3">
-        <Image src="/VT-Groups.png" alt="VT Groups Logo" width={40} height={40} className="h-10 w-10 rounded-lg border border-white/10 object-contain" style={{ width: 'auto', height: 'auto' }} />
-        <div>
+        <Image
+          src="/VT-Groups-v2.png"
+          alt="VT Groups"
+          width={168}
+          height={56}
+          className="h-10 w-auto object-contain sm:h-12 md:h-14"
+          sizes="(max-width: 320px) 40px, (max-width: 768px) 48px, 56px"
+          priority
+        />
+        <div className="hidden sm:block">
           <p className="text-sm font-semibold text-foreground">VT Groups</p>
           <p className="text-[11px] text-muted-foreground">Luxury Real Estate ERP</p>
         </div>
