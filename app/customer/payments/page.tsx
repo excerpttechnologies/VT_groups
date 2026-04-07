@@ -38,7 +38,8 @@ export default function CustomerPaymentsPage() {
     fetchPayments();
   }, []);
 
-  const completedPayments = payments.filter((p) => p.status === "Completed");
+  const paymentsArray = Array.isArray(payments) ? payments : [];
+  const completedPayments = paymentsArray.filter((p) => p.status === "Completed" || p.status === "Paid");
   const totalPaid = completedPayments.reduce((sum, p) => sum + p.amount, 0);
   const cashPayments = completedPayments.filter((p) => p.paymentMode === "Cash");
   const onlinePayments = completedPayments.filter((p) => p.paymentMode === "Online");

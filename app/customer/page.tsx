@@ -101,7 +101,11 @@ export default function CustomerDashboard() {
   const pendingBalance = totalAmount - totalPaid;
   const overallProgress = totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0;
 
-  const recentPayments = payments.slice(0, 3);
+  const paymentsArray = Array.isArray(payments) 
+    ? payments 
+    : (payments as any)?.payments || (payments as any)?.data || [];
+
+  const recentPayments = paymentsArray.slice(0, 3);
 
   if (isLoading) {
     return (
@@ -277,7 +281,7 @@ export default function CustomerDashboard() {
                 <p className="text-sm">Your payment history will appear here.</p>
               </div>
             ) : (
-              recentPayments.map((payment) => (
+              recentPayments.map((payment: any) => (
                 <div
                   key={payment._id}
                   className="flex items-center justify-between rounded-lg border border-border p-3"

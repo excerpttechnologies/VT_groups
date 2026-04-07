@@ -45,7 +45,7 @@ export default function CustomerInstallmentsPage() {
     fetchInstallments();
   }, []);
 
-  const installments = customer?.installmentSchedule || [];
+  const installments = Array.isArray(customer?.installmentSchedule) ? customer.installmentSchedule : [];
   const plot = customer?.assignedPlot;
 
   const paidInstallments = installments.filter((i: any) => i.status === "Paid");

@@ -55,7 +55,9 @@ export default function CollectPaymentPage() {
       try {
         const res = await fetch("/api/plots?status=Sold");
         const result = await res.json();
-        if (result.success) setLands(result.data);
+        if (result.success) {
+          setLands(Array.isArray(result.data) ? result.data : []);
+        }
       } catch (error) {
         toast.error("Failed to fetch lands");
       } finally {
@@ -65,7 +67,8 @@ export default function CollectPaymentPage() {
     fetchLands();
   }, []);
 
-  const selectedLandData = lands.find((l) => l._id === selectedLandId);
+  const landsArray = Array.isArray(lands) ? lands : [];
+  const selectedLandData = landsArray.find((l) => l._id === selectedLandId);
 
   const handleSubmit = async () => {
     if (!selectedLandId || !amount) {

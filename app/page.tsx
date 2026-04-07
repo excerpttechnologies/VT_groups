@@ -153,7 +153,7 @@
 //           <Link href="/" className="flex items-center gap-2">
 //             <div className="bg-white p-1 rounded-md" style={{ width: 'auto', height: '40px' }}>
 //               <Image
-//                 src="/VT-Groups.svg"
+//                 src="/VT-Groups-v2.png"
 //                 alt="VT Groups Logo"
 //                 width={120}
 //                 height={40}
@@ -205,7 +205,7 @@
 //             <Link href="/" className="flex items-center gap-2">
 //               <div className="bg-white p-1 rounded-sm" style={{ width: 'auto', height: '32px' }}>
 //                 <Image
-//                   src="/VT-Groups.svg"
+//                   src="/VT-Groups-v2.png"
 //                   alt="VT Groups Logo"
 //                   width={32}
 //                   height={32}
@@ -613,7 +613,7 @@
 //           <Link href="/" className="flex items-center gap-2">
 //             <div className="bg-white p-1 rounded-md" style={{ width: 'auto', height: '48px' }}>
 //               <Image
-//                 src="/VT-Groups.svg"
+//                 src="/VT-Groups-v2.png"
 //                 alt="VT Groups Logo"
 //                 width={144}
 //                 height={48}
@@ -665,7 +665,7 @@
 //             <Link href="/" className="flex items-center gap-2">
 //               <div className="bg-white p-1 rounded-sm" style={{ width: 'auto', height: '40px' }}>
 //                 <Image
-//                   src="/VT-Groups.svg"
+//                   src="/VT-Groups-v2.png"
 //                   alt="VT Groups Logo"
 //                   width={50}
 //                   height={50}
