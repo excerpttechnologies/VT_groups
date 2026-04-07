@@ -46,25 +46,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshUser = async () => {
     try {
-      // Check if auth token exists in cookies before making request
-      const hasAuth = document.cookie.includes('authToken') || 
-                     document.cookie.includes('token') ||
-                     document.cookie.includes('session');
+      // First check localStorage for a hint that we might be logged in
+      const savedUser = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
       
-      if (!hasAuth) {
+      // If we have a saved user, we can use it initially but still refresh from server
+      if (savedUser) {
+        try {
+          setUser(JSON.parse(savedUser));
+        } catch (e) {}
+      }
+
+      // Check if any auth cookie hint exists (non-httpOnly ones)
+      const hasCookieHint = typeof document !== 'undefined' && 
+                     (document.cookie.includes('authToken') || 
+                      document.cookie.includes('token') ||
+                      document.cookie.includes('session') ||
+                      document.cookie.includes('logged_in'));
+      
+      // If no hint and no saved user, assume not logged in to avoid unnecessary API calls
+      if (!hasCookieHint && !savedUser) {
         setUser(null);
         setLoading(false);
         return;
       }
       
+      // Always verify/refresh from server
       const res: any = await authApi.getMe();
       if (res.success) {
-        setUser(res.data);
+        const userData = res.data.user || res.data;
+        setUser(userData);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('user', JSON.stringify(userData));
+        }
       } else {
         setUser(null);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('user');
+        }
       }
     } catch (error) {
+      console.log("Refresh user failed:", error);
+      // Don't clear user immediately if it's just a network error
+      if (error === "Network Error") {
+        setLoading(false);
+        return;
+      }
       setUser(null);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('user');
+      }
     } finally {
       setLoading(false);
     }
@@ -102,6 +132,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log("✅ Setting user:", userData);
         
         setUser(userData);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('user', JSON.stringify(userData));
+        }
         setLoading(false);
         
         // Small delay to ensure state is updated
@@ -149,6 +182,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log("✅ Registration successful, setting user:", userData);
         
         setUser(userData);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('user', JSON.stringify(userData));
+        }
         setLoading(false);
         
         // Small delay to ensure state is updated
@@ -188,6 +224,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await authApi.logout();
       setUser(null);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('user');
+      }
       toast.success('Logged out successfully');
       router.push('/');
     } catch (error) {

@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
       customer = await Customer.create({
         userId: user._id,
         totalAmount: 0,
-        paidAmount: 0,
+        totalPaid: 0,
         status: 'Active',
       });
       console.log(`Customer profile created: ${customer._id}`);

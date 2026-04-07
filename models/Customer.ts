@@ -32,12 +32,12 @@ export interface ICustomer extends Document {
 const CustomerSchema: Schema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
-    assignedPlot: { type: Schema.Types.ObjectId, ref: 'Plot', required: true },
-    assignedEmployee: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    totalAmount: { type: Number, required: true },
+    assignedPlot: { type: Schema.Types.ObjectId, ref: 'Plot' },
+    assignedEmployee: { type: Schema.Types.ObjectId, ref: 'User' },
+    totalAmount: { type: Number, default: 0 },
     downPayment: { type: Number, default: 0 },
     downPaymentDate: { type: Date },
-    installmentMonths: { type: Number, required: true },
+    installmentMonths: { type: Number, default: 0 },
     installmentAmount: { type: Number },
     startDate: { type: Date, default: Date.now },
     paidInstallments: { type: Number, default: 0 },
